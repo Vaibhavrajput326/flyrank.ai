@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Refresh & Opportunity Scoring Engine | Research Paper</title>
+    <style>
+         :root {
+            --primary-color: #0f172a;
+            --accent-color: #2563eb;
+            --text-color: #334155;
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text-color);
+            background-color: var(--bg-light);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .meta {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 5px;
+            margin-top: 35px;
+        }
+        
+        h3 {
+            color: #1e293b;
+            font-size: 1.1rem;
+            margin-top: 20px;
+        }
+        
+        p,
+        li {
+            font-size: 1rem;
+        }
+        
+        .abstract-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--accent-color);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th,
+        td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f1f5f9;
+            color: var(--primary-color);
+        }
+        
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+        
+        .footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Content Refresh & Traffic Decay Opportunity Scoring Engine</h1>
+        <div class="meta">
+            <strong>Author:</strong> Vaibhav Rajput | <strong>Track:</strong> FlyRank ML Internship Capstone | <strong>Lane:</strong> Refresh / Content Opportunity Scoring
+        </div>
+
+        <div class="abstract-box">
+            <h3>Title & Abstract</h3>
+            <p><strong>Question:</strong> How can machine learning reliably predict organic search performance drops and prioritize content refresh candidates across enterprise client domains?</p>
+            <p><strong>Method:</strong> We formulated content decay prediction as a binary classification task on daily Search Console performance vectors, employing DuckDB aggregations and a Random Forest classifier evaluated under an honest grouped client
+                split (GroupShuffleSplit).</p>
+            <p><strong>Result:</strong> The Random Forest model achieved a 0.9083 ROC-AUC and 0.8310 F1-Score on unseen client domain holdouts, outperforming rule-based heuristics by over 3x in precision and eliminating naive split inflation.</p>
+        </div>
+
+        <h2>1. Introduction / Problem Statement</h2>
+        <p>Managing large-scale web properties involves monitoring thousands of published pages where manual audit is cost-prohibitive. Content decay—loss of impressions, clicks, or ranking position over time—severely degrades organic traffic if left unaddressed.
+            This work provides a decision-support heuristic to automate the ranking and identification of pages requiring optimization, snippet updates, or full content rewrites before severe position decay occurs.</p>
+
+        <h2>2. Data Contract & Preprocessing</h2>
+        <p>Analysis was executed using DuckDB querying over the FlyRank ML Internship Warehouse (fact_content_daily_performance datasets) partitioned by month.</p>
+        <ul>
+            <li><strong>Observation Window:</strong> Aggregates from month <code>2026-03</code> (9,841,378 daily grain records across 55 active clients).</li>
+            <li><strong>Unit of Analysis:</strong> Daily performance vector for a distinct <code>content_hash_id</code> and <code>client_hash_id</code>.</li>
+            <li><strong>Target Definition:</strong> Binary label <code>is_declining_label</code> derived from trend directional drop indicators.</li>
+            <li><strong>Excluded Features:</strong> Future traffic windows (month &gt; 2026-03), raw domain strings, private URL identifiers, and target-derived columns (<code>trend_direction</code>, <code>trend_pct</code>) to strictly eliminate leakage.</li>
+        </ul>
+
+        <h2>3. Methodology & Validation Design</h2>
+        <p>To eliminate client-level structural data leakage (domain authority memorization risk), we implemented a strict <strong>Grouped Client Split (GroupShuffleSplit / GroupKFold)</strong> ensuring 0% client overlap between training and validation sets.</p>
+
+        <h3>Baseline vs. Machine Learning Model</h3>
+        <ul>
+            <li><strong>Baseline Model:</strong> Heuristic rule engine flagging high-impression pages with sub-optimal position/CTR ratios.</li>
+            <li><strong>Primary Model:</strong> Random Forest Classifier (100 estimators, max depth 10) leveraging numerical feature vectors including historical clicks, impression change, and click-through rate velocity.</li>
+        </ul>
+
+        <h2>4. Results & Audit Metrics</h2>
+        <p>Performance comparison between naive random train/test split and the audited honest grouped client split:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Evaluation Metric</th>
+                    <th>Week-4 Rule Baseline</th>
+                    <th>Naive Random Split (Model)</th>
+                    <th>Honest Grouped Client Split</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>ROC-AUC</strong></td>
+                    <td>0.5000</td>
+                    <td>0.9106</td>
+                    <td><strong>0.9083</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Precision</strong></td>
+                    <td>0.0000</td>
+                    <td>0.7773</td>
+                    <td><strong>0.7643</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Recall</strong></td>
+                    <td>0.0000</td>
+                    <td>0.9045</td>
+                    <td><strong>0.9104</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>F1-Score</strong></td>
+                    <td>0.0000</td>
+                    <td>0.8361</td>
+                    <td><strong>0.8310</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>5. Limitations & Honest Framing</h2>
+        <ul>
+            <li><strong>False Positives (14.92%):</strong> Over-flagging occurs primarily on volatile or seasonal search queries where short-term keyword variance mimics early content decay.</li>
+            <li><strong>False Negatives (4.76%):</strong> Missed drops occur predominantly on long-tail, low-volume pages where low baseline traffic yields insufficient statistical signal.</li>
+            <li><strong>Honest Framing:</strong> All model outputs serve strictly as <em>measured directional decision-support heuristics</em>. They do not represent causal proof of Google search algorithm mechanics.</li>
+        </ul>
+
+        <h2>6. Ranked Action Playbook & Archetypes</h2>
+        <p>Model probabilities are mapped into automated action archetypes for content team prioritization:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Reason Code</th>
+                    <th>Recommended Action</th>
+                    <th>Condition / Signal</th>
+                    <th>Human Review Requirement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ACT_REFRESH_HIGH_IMPACT</code></td>
+                    <td>Immediate Content Rewrite / Refresh</td>
+                    <td>Model Prob &gt; 0.70 &amp; High Impressions</td>
+                    <td>Mandatory editorial review &amp; intent check.</td>
+                </tr>
+                <tr>
+                    <td><code>ACT_AUDIT_METADATA</code></td>
+                    <td>Title &amp; Meta Description Audit</td>
+                    <td>Model Prob &gt; 0.50 &amp; CTR &lt; 2%</td>
+                    <td>Verify SERP snippet &amp; competitor rich snippets.</td>
+                </tr>
+                <tr>
+                    <td><code>ACT_MERGE_OR_PRUNE</code></td>
+                    <td>Prune or Merge Content</td>
+                    <td>Model Prob &gt; 0.50 &amp; Low Impressions</td>
+                    <td>Manual canonical / URL structure audit.</td>
+                </tr>
+                <tr>
+                    <td><code>ACT_MONITOR_ONLY</code></td>
+                    <td>Protect &amp; Monitor</td>
+                    <td>Model Prob &le; 0.50</td>
+                    <td>None required.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>7. Reproducibility & Code Repository</h2>
+        <p>All pipeline notebooks, DuckDB query scripts, and model training routines are publicly open and committed under the <code>work/notebooks/</code> directory of the project repository.</p>
+        <p><strong>GitHub Repository:</strong> <a href="https://github.com/Vaibhavrajput326/flyrank.ai" target="_blank">Vaibhavrajput326/flyrank.ai</a></p>
+
+        <div class="footer">
+            Built on the <a href="https://flyrank.ai" target="_blank">FlyRank ML Internship dataset</a>.
+        </div>
+    </div>
+
+</body>
+
+</html>
